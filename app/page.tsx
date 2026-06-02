@@ -22,7 +22,8 @@ export default function Home() {
     inquiryType: "Purchase Inquiry",
     message: "",
   });
-  const [formSubmitState, setFormSubmitState] = useState<"idle" | "submitting" | "success">("idle");
+  const [formSubmitState, setFormSubmitState] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   // Track the raw window scroll position
   const { scrollY } = useScroll();
@@ -59,14 +60,32 @@ export default function Home() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormSubmitState("submitting");
+    setErrorMessage("");
 
-    // Simulate encrypted data packet transmission
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/send-inquiry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send inquiry');
+      }
+
+      // Success - show success state
       setFormSubmitState("success");
-    }, 2500);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setFormSubmitState("error");
+    }
   };
 
   return (
@@ -485,6 +504,60 @@ export default function Home() {
                   >
                     RESET COMMS MODULE
                   </button>
+                </motion.div>
+              )}
+
+              {formSubmitState === "error" && (
+                <motion.div
+                  key="error-overlay"
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-center py-12 space-y-6"
+                >
+                  <div className="w-16 h-16 border-2 border-red-500 rounded-full flex items-center justify-center mx-auto bg-red-500/10 shadow-[0_0_20px_rgba(255,59,48,0.3)]">
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold font-heading text-white tracking-widest uppercase">
+                      TRANSMISSION FAILED
+                    </h3>
+                    <div className="text-[11px] text-red-500 tracking-[0.2em] font-heading font-semibold uppercase">
+                      ERROR OCCURRED
+                    </div>
+                  </div>
+                  <div className="max-w-md mx-auto p-4 bg-[#141414] border border-red-500/30 rounded font-mono text-[11px] text-red-400/80 leading-relaxed">
+                    {errorMessage || "An error occurred while sending your inquiry. Please try again."}
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => {
+                        setFormSubmitState("idle");
+                        setErrorMessage("");
+                      }}
+                      className="px-6 py-2 bg-brand-blue hover:bg-brand-blue/80 border border-brand-blue text-white text-[10px] font-heading tracking-widest uppercase rounded transition-colors cursor-pointer"
+                    >
+                      RETRY
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFormSubmitState("idle");
+                        setFormData({
+                          name: "",
+                          email: "",
+                          phone: "",
+                          inquiryType: "Purchase Inquiry",
+                          message: "",
+                        });
+                        setErrorMessage("");
+                      }}
+                      className="px-6 py-2 bg-transparent border border-white/20 hover:border-white hover:text-white text-white/60 text-[10px] font-heading tracking-widest uppercase rounded transition-colors cursor-pointer"
+                    >
+                      RESET
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
