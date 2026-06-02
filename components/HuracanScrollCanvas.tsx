@@ -18,16 +18,25 @@ export default function HuracanScrollCanvas({
   const imagesRef = useRef<HTMLImageElement[]>([]);
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [loadError, setLoadError] = useState(false);
   const animFrameRef = useRef<number | null>(null);
 
   // Preload all frames on mount
   useEffect(() => {
     let loadedCount = 0;
+    let timeoutId: NodeJS.Timeout | null = null;
     const tempImages: HTMLImageElement[] = [];
+
+    const completeLoading = () => {
+      imagesRef.current = tempImages;
+      setImagesLoaded(true);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
 
     // Pre-populate the array to avoid race conditions with cached image loading
     for (let i = 0; i < totalFrames; i++) {
       tempImages[i] = new Image();
+      tempImages[i].crossOrigin = "anonymous";
     }
 
     for (let i = 0; i < totalFrames; i++) {
@@ -40,8 +49,7 @@ export default function HuracanScrollCanvas({
         setLoadProgress(percent);
         
         if (loadedCount === totalFrames) {
-          imagesRef.current = tempImages;
-          setImagesLoaded(true);
+          completeLoading();
         }
       };
       
@@ -50,14 +58,25 @@ export default function HuracanScrollCanvas({
         loadedCount++;
         
         if (loadedCount === totalFrames) {
-          imagesRef.current = tempImages;
-          setImagesLoaded(true);
+          completeLoading();
         }
       };
 
       // Set src after events are hooked up and slot is allocated in the array
       img.src = `${imageFolderPath}/${frameName}`;
     }
+
+    // Fallback timeout - complete loading after 10 seconds even if images haven't all loaded
+    timeoutId = setTimeout(() => {
+      console.warn(`Image loading timeout after 10 seconds. Loaded ${loadedCount}/${totalFrames} frames.`);
+      setLoadError(true);
+      setLoadProgress(100);
+      completeLoading();
+    }, 10000);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [totalFrames, imageFolderPath]);
 
   // Object-fit contain logic to render frame inside canvas
@@ -174,18 +193,34 @@ export default function HuracanScrollCanvas({
       {/* Loading Overlay */}
       {!imagesLoaded && (
         <div className="absolute inset-0 bg-[#1a1a1a] flex flex-col items-center justify-center z-20">
-          <div className="relative w-72 h-1 bg-white/10 rounded-full overflow-hidden border border-white/5">
-            <div
-              className="absolute left-0 top-0 h-full bg-brand-blue shadow-[0_0_10px_rgba(0,136,255,0.8)] transition-all duration-300 ease-out"
-              style={{ width: `${loadProgress}%` }}
-            />
-          </div>
-          <div className="mt-4 font-heading text-xs tracking-[0.25em] text-white/50 uppercase">
-            CALIBRATING NEURAL INTERFACE... {loadProgress}%
-          </div>
-          <div className="mt-1 font-body text-[10px] tracking-widest text-brand-blue uppercase animate-pulse">
-            LOADING BLUE HURACÁN SEQUENCE
-          </div>
+          {loadError ? (
+            <div className="text-center space-y-4">
+              <div className="font-heading text-sm tracking-[0.25em] text-brand-blue/60 uppercase">
+                ⚠ LOAD ERROR
+              </div>
+              <div className="max-w-md px-4 font-body text-xs text-white/40 leading-relaxed">
+                Unable to load all sequence frames. Some images may be unavailable.
+              </div>
+              <div className="font-heading text-[10px] tracking-widest text-white/30 uppercase mt-4">
+                Attempting to proceed...
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="relative w-72 h-1 bg-white/10 rounded-full overflow-hidden border border-white/5">
+                <div
+                  className="absolute left-0 top-0 h-full bg-brand-blue shadow-[0_0_10px_rgba(0,136,255,0.8)] transition-all duration-300 ease-out"
+                  style={{ width: `${loadProgress}%` }}
+                />
+              </div>
+              <div className="mt-4 font-heading text-xs tracking-[0.25em] text-white/50 uppercase">
+                CALIBRATING NEURAL INTERFACE... {loadProgress}%
+              </div>
+              <div className="mt-1 font-body text-[10px] tracking-widest text-brand-blue uppercase animate-pulse">
+                LOADING BLUE HURACÁN SEQUENCE
+              </div>
+            </>
+          )}
         </div>
       )}
 
