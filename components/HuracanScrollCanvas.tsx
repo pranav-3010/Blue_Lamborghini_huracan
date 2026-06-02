@@ -24,10 +24,13 @@ export default function HuracanScrollCanvas({
   // Preload all frames on mount
   useEffect(() => {
     let loadedCount = 0;
+    let completedLoading = false;
     let timeoutId: NodeJS.Timeout | null = null;
     const tempImages: HTMLImageElement[] = [];
 
     const completeLoading = () => {
+      if (completedLoading) return;
+      completedLoading = true;
       imagesRef.current = tempImages;
       setImagesLoaded(true);
       if (timeoutId) clearTimeout(timeoutId);
@@ -39,6 +42,7 @@ export default function HuracanScrollCanvas({
       tempImages[i].crossOrigin = "anonymous";
     }
 
+    // Start loading all images
     for (let i = 0; i < totalFrames; i++) {
       const img = tempImages[i];
       const frameName = `ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
@@ -62,17 +66,17 @@ export default function HuracanScrollCanvas({
         }
       };
 
-      // Set src after events are hooked up and slot is allocated in the array
       img.src = `${imageFolderPath}/${frameName}`;
     }
 
-    // Fallback timeout - complete loading after 10 seconds even if images haven't all loaded
+    // Aggressive fallback timeout - complete loading after 4 seconds regardless
+    // This ensures users never see an infinite loading screen
     timeoutId = setTimeout(() => {
-      console.warn(`Image loading timeout after 10 seconds. Loaded ${loadedCount}/${totalFrames} frames.`);
-      setLoadError(true);
+      console.warn(`Image loading timeout. Loaded ${loadedCount}/${totalFrames} frames. Proceeding anyway.`);
+      setLoadError(loadedCount < totalFrames * 0.5);
       setLoadProgress(100);
       completeLoading();
-    }, 10000);
+    }, 4000);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
