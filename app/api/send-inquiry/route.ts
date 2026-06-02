@@ -1,15 +1,25 @@
 import nodemailer from 'nodemailer';
 import { NextRequest, NextResponse } from 'next/server';
+import { config } from 'dotenv';
+import { resolve } from 'path';
 
-// Create a test transporter using Gmail (you can replace with another service)
-// For production, you should use environment variables for credentials
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
+// Load environment variables from the shared env file
+config({ path: resolve('/vercel/share/.env.project') });
+
+// Create a transporter using Gmail
+let transporter: any;
+
+try {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+} catch (error) {
+  console.error('Failed to create transporter:', error);
+}
 
 export async function POST(request: NextRequest) {
   try {
