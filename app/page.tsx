@@ -69,20 +69,26 @@ export default function Home() {
     setFormSubmitState("submitting");
     setFormError("");
 
+    // Validate required fields
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      setFormError("Please fill in all required fields.");
+      setFormSubmitState("error");
+      return;
+    }
+
     try {
-      // Send email via EmailJS
+      // Send email via EmailJS with correct template variable names
       await emailjs.send(
         "service_zcc9c34", // Service ID
         "template_um0mjzt", // Template ID
         {
+          // Template variables - these must match your EmailJS template
           to_email: "chiravurip493@gmail.com",
-          from_name: formData.name,
-          from_email: formData.email,
-          phone: formData.phone,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
           inquiry_type: formData.inquiryType,
-          message: formData.message,
-          // Also send confirmation to user
-          to_email_user: formData.email,
+          message: formData.message.trim(),
         }
       );
 
