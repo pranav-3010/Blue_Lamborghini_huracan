@@ -30,6 +30,28 @@ export default function RootLayout({
       lang="en"
       className={`${orbitron.variable} ${rajdhani.variable} antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (window.innerWidth < 1024) {
+                  var metas = document.getElementsByTagName('meta');
+                  for (var i = 0; i < metas.length; i++) {
+                    if (metas[i].name === 'viewport') {
+                      metas[i].parentNode.removeChild(metas[i]);
+                    }
+                  }
+                  var meta = document.createElement('meta');
+                  meta.name = 'viewport';
+                  meta.content = 'width=1280, initial-scale=' + (window.screen.width / 1280) + ', maximum-scale=1.0, user-scalable=yes';
+                  document.head.appendChild(meta);
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="bg-[#1a1a1a] text-white">
         {children}
       </body>
